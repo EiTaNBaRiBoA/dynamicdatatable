@@ -5,8 +5,11 @@ DynamicDataTable is a GDScript plugin for Godot 4 that allows you to create and 
 ## Features
 
 * Dynamically create tables with customizable headers and data.
+* Dynamic resizing column widths.
 * Support for various data types (strings, numbers).
 * Column sorting in ascending or descending order.
+* Mouse events on headers and data cells
+* Keyboard events on selected row (cursor up/down, page up/down, home, end)
 * Appearance customization through themes and styles.
 * Compatibility from Godot 4.3.
 
@@ -23,6 +26,10 @@ DynamicDataTable is a GDScript plugin for Godot 4 that allows you to create and 
 3.  Set the column headers using the `set_headers()` method.
 4.  Set the table data using the `set_data()` method.
 5.  Customize the table appearance through the Inspector properties.
+
+or
+
+Download this entire Godot Project and run the main scene (example.tscn)
 
 ## Code Example
 
@@ -95,13 +102,13 @@ func _on_cell_selected(row, column):
 func _on_header_clicked(column):
 	print("Header clicked on column ", column)
 	if (column == last_column):
-		ordering = not ordering													# invert previous column sort direction
+		ordering = not ordering			# invert previous column sort direction
 	else:
-		ordering = true															# default sort ordering direction
+		ordering = true				# default sort ordering direction
 	var new_row = dynamic_table.ordering_data(column, ordering, selected_row)
-	selected_row = new_row														# restoring potential previous row selected
-	last_column = column
-	dynamic_table._selected_cell = [new_row, last_column]						# select row at the nuew position
+	selected_row = new_row				# restoring potential previous row selected
+	last_column = column 
+	dynamic_table._selected_cell = [new_row, last_column] # select row at the nuew position
 
 # On resized column callback
 func _on_column_resized(column, new_width):
