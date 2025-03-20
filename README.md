@@ -116,7 +116,8 @@ func _on_header_clicked(column):
 # On resized column callback
 func _on_column_resized(column, new_width):
 	print("Column ", column, " resized at width ", new_width)
-	
+```	
+
 ## Support the Development
 
 This plugin is provided free of charge to the community. If you appreciate the work that has gone into its development and find it useful, please consider making a donation. Your support helps me dedicate more time to maintaining and improving this plugin, as well as creating new free resources.
