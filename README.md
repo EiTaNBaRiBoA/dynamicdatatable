@@ -117,3 +117,12 @@ func _on_header_clicked(column):
 func _on_column_resized(column, new_width):
 	print("Column ", column, " resized at width ", new_width)
 	
+## Support the Development
+
+This plugin is provided free of charge to the community. If you appreciate the work that has gone into its development and find it useful, please consider making a donation. Your support helps me dedicate more time to maintaining and improving this plugin, as well as creating new free resources.
+
+Any amount is greatly appreciated!
+
+My [Paypal donation link](https://www.paypal.me/donatejospic?locale.x=it_IT)
+
+Thank you for your support!
