@@ -10,6 +10,7 @@ DynamicDataTable is a GDScript plugin for Godot 4 that allows you to create and 
 * Dynamic resizing column widths.
 * Support for various data types (strings, numbers).
 * Column sorting in ascending or descending order.
+* Independent horizontal alignment for columns (left, center or right)
 * Mouse events on headers and data cells
 * Keyboard events on selected row (cursor up/down, page up/down, home, end)
 * Appearance customization through themes and styles.
@@ -43,13 +44,13 @@ extends Control
 
 var headers				# array of columns header
 var data				# array of data, rows and columns
-var ordering = true			# default sorting direction, ascending 
-var last_column = -1			# last sorted column
-var selected_row = -1			# last selected row
+var ordering = true		# default sorting direction, ascending 
+var last_column = -1	# last sorted column
+var selected_row = -1	# last selected row
 
 func _ready():
 	# Set table header
-	headers = ["ID|C", "Name", "Lastname", "Age|r", "Job", "City"]
+	headers = ["ID|C", "Name", "Lastname", "Age|r", "Job", "City"] # use |align for alignment columns (l, c, r or L, C, R)
 	dynamic_table.set_headers(headers)
 	
 	# Example data
