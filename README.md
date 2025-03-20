@@ -39,9 +39,9 @@ extends Control
 # Reference to dynamic table
 @onready var dynamic_table = $DynamicTable
 
-var headers						# array of columns header
-var data						# array of data, rows and columns
-var ordering = true				# default sorting direction, ascending 
+var headers				# array of columns header
+var data				# array of data, rows and columns
+var ordering = true			# default sorting direction, ascending 
 var last_column = -1			# last sorted column
 var selected_row = -1			# last selected row
 
