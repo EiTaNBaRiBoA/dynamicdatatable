@@ -83,6 +83,11 @@ func _update_column_widths():
 			_min_column_widths[i] = default_minimum_column_width
 	_total_columns = headers.size()
 
+#--------------------
+# Public functions
+#--------------------
+
+# create headers
 func set_headers(new_headers: Array):
 	var typed_headers: Array[String] = []
 	for header in new_headers:
@@ -93,6 +98,7 @@ func set_headers(new_headers: Array):
 	_update_scrollbars()
 	queue_redraw()
 
+# insert data
 func set_data(new_data: Array):
 	_data = new_data
 	_total_rows = _data.size()
@@ -115,7 +121,7 @@ func set_data(new_data: Array):
 	_update_scrollbars()
 	queue_redraw()
 
-# Custom ordering	
+# custom ordering	
 func ordering_data(column: int, asc: bool, selrow: int):
 	_last_column_sorted = column
 	# Create a map dictionary to store previous rows before sorting (for preserving last data selection)
@@ -148,12 +154,18 @@ func ordering_data(column: int, asc: bool, selrow: int):
 	
 	return -1  # row is not found
 
+# add row
 func add_row(row_data: Array):
 	_data.append(row_data)
 	_total_rows += 1
 	_update_scrollbars()
 	queue_redraw()
 
+# selected cell
+func set_selected_cell(row: int, col: int):
+	_selected_cell = [row, col]
+
+# update cell
 func update_cell(row: int, column: int, value):
 	if row >= 0 and row < _data.size() and column >= 0 and column < _total_columns:
 		# Assicurati che la riga abbia abbastanza colonne
@@ -162,15 +174,19 @@ func update_cell(row: int, column: int, value):
 		_data[row][column] = value
 		queue_redraw()
 
+# cell value
 func get_cell_value(row: int, column: int):
 	if row >= 0 and row < _data.size() and column >= 0 and column < _data[row].size():
 		return _data[row][column]
 	return null
 
+# row value
 func get_row_value(row: int):
 	if row >= 0 and row < _data.size():
 		return _data[row]
 	return null
+
+#--------------------
 	
 func _update_scrollbars():
 	if not is_inside_tree():

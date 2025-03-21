@@ -72,7 +72,7 @@ func _on_header_clicked(column):
 	var new_row = dynamic_table.ordering_data(column, ordering, selected_row)
 	selected_row = new_row														# restoring potential previous row selected
 	last_column = column
-	dynamic_table._selected_cell = [new_row, last_column]						# select row at the nuew position
+	dynamic_table.set_selected_cell(new_row, last_column)						# select row at the nuew position
 
 # On resized column callback
 func _on_column_resized(column, new_width):
