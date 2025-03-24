@@ -44,6 +44,7 @@ var font = get_theme_default_font()
 var font_size = get_theme_default_font_size()
 
 func _ready():
+		
 	# Initialize scrollbars
 	_h_scroll = HScrollBar.new()
 	_h_scroll.name = "HScrollBar"
@@ -67,6 +68,12 @@ func _ready():
 	resized.connect(_on_resized)
 	gui_input.connect(_on_gui_input)
 	
+	# Maximize area from parent control node
+	self.anchor_left = 0.0
+	self.anchor_top = 0.0
+	self.anchor_right = 1.0
+	self.anchor_bottom = 1.0
+	
 	# Force refresh drawing
 	queue_redraw()
 
@@ -83,11 +90,6 @@ func _update_column_widths():
 			_min_column_widths[i] = default_minimum_column_width
 	_total_columns = headers.size()
 
-#--------------------
-# Public functions
-#--------------------
-
-# create headers
 func set_headers(new_headers: Array):
 	var typed_headers: Array[String] = []
 	for header in new_headers:
@@ -98,7 +100,6 @@ func set_headers(new_headers: Array):
 	_update_scrollbars()
 	queue_redraw()
 
-# insert data
 func set_data(new_data: Array):
 	_data = new_data
 	_total_rows = _data.size()
@@ -121,7 +122,7 @@ func set_data(new_data: Array):
 	_update_scrollbars()
 	queue_redraw()
 
-# custom ordering	
+# Custom ordering	
 func ordering_data(column: int, asc: bool, selrow: int):
 	_last_column_sorted = column
 	# Create a map dictionary to store previous rows before sorting (for preserving last data selection)
@@ -154,18 +155,12 @@ func ordering_data(column: int, asc: bool, selrow: int):
 	
 	return -1  # row is not found
 
-# add row
 func add_row(row_data: Array):
 	_data.append(row_data)
 	_total_rows += 1
 	_update_scrollbars()
 	queue_redraw()
 
-# selected cell
-func set_selected_cell(row: int, col: int):
-	_selected_cell = [row, col]
-
-# update cell
 func update_cell(row: int, column: int, value):
 	if row >= 0 and row < _data.size() and column >= 0 and column < _total_columns:
 		# Assicurati che la riga abbia abbastanza colonne
@@ -174,19 +169,15 @@ func update_cell(row: int, column: int, value):
 		_data[row][column] = value
 		queue_redraw()
 
-# cell value
 func get_cell_value(row: int, column: int):
 	if row >= 0 and row < _data.size() and column >= 0 and column < _data[row].size():
 		return _data[row][column]
 	return null
 
-# row value
 func get_row_value(row: int):
 	if row >= 0 and row < _data.size():
 		return _data[row]
 	return null
-
-#--------------------
 	
 func _update_scrollbars():
 	if not is_inside_tree():
@@ -198,7 +189,7 @@ func _update_scrollbars():
 		row_height = 30.0 if row_height == null else row_height
 
 	var visible_width = size.x - (_v_scroll.size.x if _v_scroll.visible else 0)
-	var visible_height = size.y - (_h_scroll.size.y if _h_scroll.visible else 0) - header_height
+	var visible_height = size.y - (_h_scroll.size.y if _h_scroll.visible else 0) - header_height 
 
 	# Calcola la larghezza totale della tabella
 	var total_width = 0
@@ -214,10 +205,10 @@ func _update_scrollbars():
 		_h_scroll.step = default_minimum_column_width / 2
 
 	# Aggiorna la barra di scorrimento verticale
-	var total_height = int(_total_rows) * float(row_height)  # Converti esplicitamente
+	var total_height = int(_total_rows + 1) * float(row_height)  # Converti esplicitamente
 	_v_scroll.visible = total_height > visible_height
 	if _v_scroll.visible:
-		_v_scroll.max_value = total_height
+		_v_scroll.max_value = total_height 
 		_v_scroll.page = visible_height
 		_v_scroll.step = row_height
 
@@ -250,10 +241,13 @@ func _draw():
 			x_pos += _column_widths[c]
 		
 		# Se la colonna è visibile
-		if x_pos + _column_widths[col] > 0 and x_pos < visible_width:
+		if x_pos + _column_widths[col] > 0 and x_pos  < visible_width:
 			# Disegna il bordo dell'header
 			draw_line(Vector2(x_pos, 0), Vector2(x_pos, header_height), grid_color)
-			draw_line(Vector2(x_pos, header_height), Vector2(x_pos + _column_widths[col], header_height), grid_color)
+			var rectwidth = x_pos + _column_widths[col]
+			if (rectwidth  > visible_width ):
+				rectwidth = visible_width 
+			draw_line(Vector2(x_pos, header_height), Vector2(rectwidth, header_height), grid_color)
 			
 			# Disegna il testo dell'header
 			if col < headers.size():
@@ -267,15 +261,12 @@ func _draw():
 					if (h_align == HORIZONTAL_ALIGNMENT_LEFT or h_align == HORIZONTAL_ALIGNMENT_CENTER):
 						icon_align = HORIZONTAL_ALIGNMENT_RIGHT
 					draw_string(font, Vector2(x_pos, header_height/2 + text_size.y/2 - (font_size/2 - 1)), _icon_sort, icon_align, _column_widths[col], font_size/1.3, font_color)
-			
+	
 			# Disegna il divisore trascinabile
 			var divider_x = x_pos + _column_widths[col]
-			draw_line(Vector2(divider_x, 0), Vector2(divider_x, header_height), grid_color, 2.0 if _mouse_over_divider == col else 1.0)
-			
-			# Disegna un piccolo indicatore per il ridimensionamento
-			if _mouse_over_divider == col:
-				draw_rect(Rect2(divider_x - 2, header_height - 10, 4, 10), Color(0.5, 0.5, 0.5, 0.8))
-	
+			if (divider_x  < visible_width):
+				draw_line(Vector2(divider_x, 0), Vector2(divider_x, header_height), grid_color, 2.0 if _mouse_over_divider == col else 1.0)
+				
 	# Disegna le righe di dati
 	for row in range(_visible_rows_range[0], _visible_rows_range[1]):
 		var row_y = y_offset + (row - _visible_rows_range[0]) * row_height
@@ -289,54 +280,53 @@ func _draw():
 		
 		# Disegna le celle
 		x_offset = -_h_scroll_position
+		var cell_x = x_offset
 		for col in range(_total_columns):
-			var cell_x = x_offset
-			for c in range(col):
-				cell_x += _column_widths[c]
+			cell_x += _column_widths[col]
 			
 			# Se la cella è visibile
-			
-			#if cell_x + _column_widths[col] > 0 and cell_x < visible_width:
-			# Disegna il bordo sinistro della cella
-			draw_line(Vector2(cell_x, row_y), Vector2(cell_x, row_y + row_height), grid_color)
-			
-			# Disegna il bordo destro dell'ultima colonna
-			if col == _total_columns - 1:
-				draw_line(Vector2(cell_x + _column_widths[col], row_y), 
-						  Vector2(cell_x + _column_widths[col], row_y + row_height), grid_color)
-			
-			# Evidenzia la cella selezionata
-			if _selected_cell[0] == row and _selected_cell[1] == col:
-				if (!selected_mode_row):			# evidenzia cella singola
-					draw_rect(Rect2(cell_x, row_y, _column_widths[col], row_height-1), selected_back_color)
-				else:								# evidenzia intera riga
-					var dimx = 0
-					for c in range(_column_widths.size()):
-						dimx += _column_widths[c]
-					draw_rect(Rect2(x_offset, row_y, dimx, row_height-1), selected_back_color)
-			
-			# Disegna il testo della cella
-			var cell_value = ""
-			if row < _data.size() and col < _data[row].size():
-				cell_value = str(_data[row][col])
-			
-			var h_align = _align_text_in_cell(col)[1]
-			var x_margin = _align_text_in_cell(col)[2]
-			
-			if (!selected_mode_row):			# scrive cella singola
-				var text_size = font.get_string_size(cell_value, h_align, _column_widths[col], font_size)
-				draw_string(font, Vector2(cell_x + x_margin, row_y + row_height/2 + text_size.y/2 - (font_size/2 - 2)), cell_value, h_align, _column_widths[col], font_size, font_color)
-			else:
-				if (col == 0): # scrive una sola volta
-					_selected_cell[1] = 0
-					var c_x = x_offset
-					for c in range(_column_widths.size()):
-						var c_value = str(_data[row][c])
-						h_align = _align_text_in_cell(c)[1]
-						x_margin = _align_text_in_cell(c)[2]
-						var text_size = font.get_string_size(c_value, h_align, _column_widths[c], font_size)
-						draw_string(font, Vector2(c_x + x_margin, row_y + row_height/2 + text_size.y/2 - (font_size/2 - 2)), c_value, h_align, _column_widths[c], font_size, font_color)
-						c_x += _column_widths[c]
+			if cell_x  < visible_width:
+				# Disegna il bordo sinistro della cella
+				draw_line(Vector2(cell_x, row_y), Vector2(cell_x, row_y + row_height), grid_color)
+				
+				# Disegna il bordo destro dell'ultima colonna
+				#if col == _total_columns - 1:
+					#draw_line(Vector2(cell_x + _column_widths[col], row_y), 
+							 # Vector2(cell_x + _column_widths[col], row_y + row_height), grid_color)
+						
+				# Evidenzia la cella selezionata
+				if _selected_cell[0] == row and _selected_cell[1] == col:
+					if (!selected_mode_row):			# evidenzia cella singola
+						draw_rect(Rect2(cell_x, row_y, _column_widths[col], row_height-1), selected_back_color)
+					else:								# evidenzia intera riga
+						var dimx = 0
+						for c in range(_column_widths.size()):
+							dimx += _column_widths[c]
+						draw_rect(Rect2(x_offset, row_y, visible_width - x_offset, row_height-1), selected_back_color)
+				
+				# Disegna il testo della cella
+				var cell_value = ""
+				if row < _data.size() and col < _data[row].size():
+					cell_value = str(_data[row][col])
+				
+				var h_align = _align_text_in_cell(col)[1]
+				var x_margin = _align_text_in_cell(col)[2]
+				
+				if (!selected_mode_row):			# scrive cella singola
+					var text_size = font.get_string_size(cell_value, h_align, _column_widths[col], font_size)
+					draw_string(font, Vector2(cell_x + x_margin, row_y + row_height/2 + text_size.y/2 - (font_size/2 - 2)), cell_value, h_align, _column_widths[col], font_size, font_color)
+				else:
+					if (col == 0): # scrive una sola volta
+						_selected_cell[1] = 0
+						var c_x = x_offset
+						for c in range(_column_widths.size()):
+							var c_value = str(_data[row][c])
+							h_align = _align_text_in_cell(c)[1]
+							x_margin = _align_text_in_cell(c)[2]
+							var text_size = font.get_string_size(c_value, h_align, _column_widths[c], font_size)
+							if c_x  < visible_width:
+								draw_string(font, Vector2(c_x + x_margin, row_y + row_height/2 + text_size.y/2 - (font_size/2 - 2)), c_value, h_align, _column_widths[c], font_size, font_color)
+								c_x += _column_widths[c]
 							
 func _align_text_in_cell(col: int):
 	var header_content = headers[col].split("|")
@@ -431,7 +421,7 @@ func _unhandled_input(event):
 		# Key End
 		elif event.pressed and event.keycode == KEY_END:
 			row = _data.size() - 1
-			_v_scroll.value = _v_scroll.max_value
+			_v_scroll.value = _v_scroll.max_value 
 		# Key ESC
 		elif event.pressed and event.keycode == KEY_ESCAPE:
 			row = -1
@@ -444,7 +434,7 @@ func _check_mouse_over_divider(mouse_pos):
 	_mouse_over_divider = -1
 	var x_offset = -_h_scroll_position
 	
-	for col in range(_total_columns):
+	for col in range(_total_columns - 1):
 		var divider_x = x_offset + _column_widths[col]
 		if abs(mouse_pos.x - divider_x) < _divider_width:
 			_mouse_over_divider = col
