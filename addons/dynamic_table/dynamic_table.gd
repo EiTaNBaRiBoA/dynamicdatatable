@@ -16,6 +16,7 @@ signal column_resized(column, new_width)
 @export var selected_back_color: Color = Color(0.0, 0.0, 1.0, 0.5)
 @export var selected_mode_row : bool = true
 @export var font_color: Color = Color(1.0, 1.0, 1.0)
+@export var row_color: Color = Color(0.55, 0.55, 0.55, 1.0) 
 @export var alternate_row_color: Color = Color(0.45, 0.45, 0.45, 1.0)
 
 # Internal variables
@@ -103,7 +104,7 @@ func set_headers(new_headers: Array):
 func set_data(new_data: Array):
 	_data = new_data
 	_total_rows = _data.size()
-	_visible_rows_range = [0, floor(self.size.y / row_height)] #[0, _total_rows]
+	_visible_rows_range = [0, min(_total_rows, floor(self.size.y / row_height))] 
 	# controlla che le righe abbiano la dimensione del numero di colonne, al contrario aggiunge un valore predefinito per riportare
 	# il numero delle colonne della riga coincidente con quello delle colonne totali (definite dall'header)
 	var blank = null
@@ -116,9 +117,9 @@ func set_data(new_data: Array):
 			var header_size = font.get_string_size(str(headers[col]), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 			var data_size = font.get_string_size(str(_data[row][col]), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 			if (_column_widths[col] < max(header_size.x, data_size.x)):
-				_column_widths[col] = max(header_size.x, data_size.x) + 20
+				_column_widths[col] = max(header_size.x, data_size.x) + font_size * 4
 				_min_column_widths[col] = _column_widths[col]
-				
+			
 	_update_scrollbars()
 	queue_redraw()
 
@@ -140,11 +141,11 @@ func ordering_data(column: int, asc: bool, selrow: int):
 		if value_b == null or str(value_b) == "":
 			value_b = ""
 
-		if asc:
-			_icon_sort = " ▼ "
+		if (asc):
+			_set_icon_down()
 			return value_a < value_b
 		else:
-			_icon_sort = " ▲ "
+			_set_icon_up()
 			return value_a > value_b
 	)
 			
@@ -154,7 +155,7 @@ func ordering_data(column: int, asc: bool, selrow: int):
 			return new_row
 	
 	return -1  # row is not found
-
+		
 func add_row(row_data: Array):
 	_data.append(row_data)
 	_total_rows += 1
@@ -178,7 +179,16 @@ func get_row_value(row: int):
 	if row >= 0 and row < _data.size():
 		return _data[row]
 	return null
-	
+
+func set_selected_cell(row: int, col: int):
+	_selected_cell = [row, col]
+
+func _set_icon_down():
+	_icon_sort = " ▼ "
+
+func _set_icon_up():
+	_icon_sort = " ▲ "
+		
 func _update_scrollbars():
 	if not is_inside_tree():
 		return
@@ -205,13 +215,14 @@ func _update_scrollbars():
 		_h_scroll.step = default_minimum_column_width / 2
 
 	# Aggiorna la barra di scorrimento verticale
-	var total_height = int(_total_rows + 1) * float(row_height)  # Converti esplicitamente
+	var total_height = int(_total_rows) * float(row_height)  # Converti esplicitamente
 	_v_scroll.visible = total_height > visible_height
 	if _v_scroll.visible:
 		_v_scroll.max_value = total_height 
 		_v_scroll.page = visible_height
 		_v_scroll.step = row_height
-
+	
+	
 func _on_h_scroll_changed(value):
 	_h_scroll_position = value
 	queue_redraw()
@@ -271,9 +282,9 @@ func _draw():
 	for row in range(_visible_rows_range[0], _visible_rows_range[1]):
 		var row_y = y_offset + (row - _visible_rows_range[0]) * row_height
 		
-		# Disegna lo sfondo della riga (alternando i colori)
-		if row % 2 == 1:
-			draw_rect(Rect2(0, row_y, visible_width, row_height), alternate_row_color)
+		# Set the row background color (thanks to BaconEggsRL)
+		var bg_color = alternate_row_color if row % 2 == 1 else row_color
+		draw_rect(Rect2(0, row_y, visible_width, row_height), bg_color)
 		
 		# Disegna il bordo inferiore della riga
 		draw_line(Vector2(0, row_y + row_height), Vector2(visible_width, row_y + row_height), grid_color)
@@ -319,8 +330,10 @@ func _draw():
 					if (col == 0): # scrive una sola volta
 						_selected_cell[1] = 0
 						var c_x = x_offset
-						for c in range(_column_widths.size()):
-							var c_value = str(_data[row][c])
+						for c in range(_total_columns):
+							var c_value = ""
+							if row < _data.size() and c < _data[row].size():
+								c_value = str(_data[row][c])
 							h_align = _align_text_in_cell(c)[1]
 							x_margin = _align_text_in_cell(c)[2]
 							var text_size = font.get_string_size(c_value, h_align, _column_widths[c], font_size)
