@@ -8,7 +8,7 @@ DynamicDataTable is a GDScript plugin for Godot 4 that allows you to create and 
 
 * Dynamically create tables with customizable headers and data.
 * Dynamic resizing column widths.
-* Support for various data types (strings, numbers).
+* Support for various data types (strings, numbers and dates in the format dd/mm/yyyy).
 * Column sorting in ascending or descending order.
 * Independent horizontal alignment for columns (left, center or right)
 * Mouse events on headers and data cells
