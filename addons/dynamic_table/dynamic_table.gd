@@ -123,38 +123,65 @@ func set_data(new_data: Array):
 	_update_scrollbars()
 	queue_redraw()
 
-# Custom ordering	
-func ordering_data(column: int, asc: bool, selrow: int):
-	_last_column_sorted = column
-	# Create a map dictionary to store previous rows before sorting (for preserving last data selection)
-	var index_map = {}
-	for i in range(_data.size()):
-		index_map[_data[i]] = i
-	
-	_data.sort_custom(func(a, b):
-		var value_a = a[column]
-		var value_b = b[column]
+func _is_date_string(value: String) -> bool:
+	var date_regex = RegEx.new()
+	date_regex.compile("^\\d{2}/\\d{2}/\\d{4}$")
+	return date_regex.search(value) != null
 
-		# Manage blank or empty values
-		if value_a == null or str(value_a) == "":
-			value_a = ""
-		if value_b == null or str(value_b) == "":
-			value_b = ""
+func _is_date_column(column_index: int) -> bool:
+	# Controlla se la maggior parte dei valori della colonna sono date nel formato gg/mm/aaaa
+	var match_count = 0
+	var total = 0
+	for row in _data:
+		if column_index >= row.size():
+			continue
+		var value = str(row[column_index])
+		total += 1
+		if _is_date_string(value):
+			match_count += 1
+	return (total > 0 and match_count > total / 2) # soglia: più della metà sono date
 
-		if (asc):
-			_set_icon_down()
-			return value_a < value_b
-		else:
-			_set_icon_up()
-			return value_a > value_b
-	)
-			
-	# Find new row about last selection after ordering
-	for new_row in range(_data.size()):
-		if index_map.get(_data[new_row]) == selrow:
-			return new_row
-	
-	return -1  # row is not found
+func _parse_date(date_str: String) -> Array:
+	var parts = date_str.split("/")
+	if parts.size() != 3:
+		return [0, 0, 0]
+	var day = int(parts[0])
+	var month = int(parts[1])
+	var year = int(parts[2])
+	return [year, month, day]
+
+func ordering_data(column_index: int, ascending: bool = true, selected_row: int = -1) -> int:
+	_last_column_sorted = column_index
+	if _is_date_column(column_index):
+		_data.sort_custom(func(a, b):
+			var a_val = _parse_date(str(a[column_index]))
+			var b_val = _parse_date(str(b[column_index]))
+			if ascending:
+				_set_icon_down()
+				return a_val < b_val
+			else:
+				_set_icon_up()
+				return a_val > b_val
+		)
+	else:
+		_data.sort_custom(func(a, b):
+			var a_val = a[column_index]
+			var b_val = b[column_index]
+			if ascending:
+				_set_icon_down()
+				return a_val < b_val
+			else:
+				_set_icon_up()
+				return a_val > b_val
+		)
+	queue_redraw()
+	if selected_row >= 0:
+		var sel_val = _data[selected_row]
+		for i in range(_data.size()):
+			if _data[i] == sel_val:
+				return i
+	return -1
+
 		
 func add_row(row_data: Array):
 	_data.append(row_data)
