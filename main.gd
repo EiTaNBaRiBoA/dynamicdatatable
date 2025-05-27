@@ -5,18 +5,15 @@ extends Control
 
 var headers						# array of columns header
 var data						# array of data, rows and columns
-var ordering = true				# default sorting direction, ascending 
-var last_column = -1			# last sorted column
-var selected_row = -1			# last selected row
 
 func _ready():
 	# Set table header
-	headers = ["ID|C", "Name", "Lastname", "Age|r", "Job", "City", "Date"]
+	headers = ["ID|C", "Name", "Lastname", "Age|r", "Job", "City", "Date", "Work|p"]
 	dynamic_table.set_headers(headers)
 	
 	# Example data
 	data = [
-		[1, "Michael", "Smith", 34, "Engineer", "London", "10/12/2005"],
+		[1, "Michael", "Smith", 34, "Engineer", "London", "10/12/2005", 0.5],
 		[2, "Louis", "Johnson", 28, "Doctor", "New York", "05/11/2023"],
 		[3, "Ann", "Williams", 42, "Lawyer", "Tokyo", "18/03/2025"],
 		[4, "John", "Brown", 31, "Teacher", "Sydney", "02/07/2024"],
@@ -26,6 +23,7 @@ func _ready():
 		[8, "Mark", "Miller", 44, "Entrepreneur", "Toronto", "21/08/2025"],
 		[9, "Paula", "Wilson", 29, "Journalist", "Rio de Janeiro", "10/12/2023"],
 		[10, "Stephen", "Moore", 33, "Programmer", "Dubai", "30/11/2024"],
+		[11, "Mark", "Jefferson", 31, "Dentist", "Lisbona", "10/02/2018", 0.47],
 		[12, "James", "Taylor", 28, "Doctor", "Chicago", "03/06/2026"],
 		[13, "Carmen", "Anderson", 42, "Lawyer", "Hong Kong", "25/02/2024"],
 		[14, "John", "Thomas", 39, "Architect", "Amsterdam", "17/10/2025"],
@@ -49,9 +47,12 @@ func _ready():
 
 	# Insert data table
 	dynamic_table.set_data(data)
+	# Default order column 
+	dynamic_table.ordering_data(0, true)  # 0 -> ID column and true -> ascending order
 	
 	# Signals connections
 	dynamic_table.cell_selected.connect(_on_cell_selected)
+	dynamic_table.cell_edited.connect(_on_cell_edited)
 	dynamic_table.header_clicked.connect(_on_header_clicked)
 	dynamic_table.column_resized.connect(_on_column_resized)
 
@@ -60,20 +61,17 @@ func _on_cell_selected(row, column):
 	print("Cell selected on row ", row, ", column ", column)
 	print("Cell value: ", dynamic_table.get_cell_value(row, column))
 	print("Row value: ", dynamic_table.get_row_value(row))
-	selected_row = row
 
+# On edited cell callback
+func _on_cell_edited(row, column, old_value, new_value):
+	print("Cell edited on row ", row, ", column ", column)
+	print("Cell old value: ", old_value)
+	print("Cell new value: ", new_value)
+		
 # On clicked header cell callback
 func _on_header_clicked(column):
 	print("Header clicked on column ", column)
-	if (column == last_column):
-		ordering = not ordering													# invert previous column sort direction
-	else:
-		ordering = true															# default sort ordering direction
-	var new_row = dynamic_table.ordering_data(column, ordering, selected_row)
-	selected_row = new_row														# restoring potential previous row selected
-	last_column = column
-	dynamic_table.set_selected_cell(new_row, last_column)						# select row at the nuew position
-
+	
 # On resized column callback
 func _on_column_resized(column, new_width):
 	print("Column ", column, " resized at width ", new_width)
