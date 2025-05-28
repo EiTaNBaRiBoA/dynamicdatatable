@@ -3,6 +3,7 @@ extends Control
 class_name DynamicTable
 
 signal cell_selected(row, column)
+signal cell_right_selected(row, column, mousepos)
 signal header_clicked(column)
 signal column_resized(column, new_width)
 signal progress_changed(row, column, new_value)
@@ -683,6 +684,10 @@ func _on_gui_input(event):
 				_dragging_progress = false
 				_progress_drag_row = -1
 				_progress_drag_col = -1
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			if event.pressed: 
+				var mouse_pos = event.position
+				_handle_right_click(mouse_pos)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_v_scroll.value = max(0, _v_scroll.value - _v_scroll.step * 1) # scorri su (originale -> * 3)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
@@ -706,29 +711,6 @@ func _on_gui_input(event):
 		# Altrimenti verifica se il mouse è sopra un divisore di colonna
 		else:
 			_check_mouse_over_divider(mouse_pos)
-
-func _handle_double_click(mouse_pos: Vector2):
-	# Determina se il doppio click è avvenuto su una cella di dati
-	if mouse_pos.y >= header_height:
-		var row = floor((mouse_pos.y - header_height) / row_height) + _visible_rows_range[0]
-		var col = -1
-		var x_offset = -_h_scroll_position
-		for c in range(_total_columns):
-			if mouse_pos.x >= x_offset and mouse_pos.x < x_offset + _column_widths[c]:
-				col = c
-				break
-			x_offset += _column_widths[c]
-		
-		if row >= 0 and row < _total_rows and col >= 0 and col < _total_columns:
-			# Avvia l'editing della cella se non è una colonna progress
-			#if not _is_progress_column(col):
-			#	_start_cell_editing(row, col)
-			_start_cell_editing(row, col)
-	# Se il doppio click è sull'header, puoi aggiungere logica specifica qui se necessario
-	elif mouse_pos.y < header_height:
-		# Potresti voler implementare un'azione specifica per il doppio click sull'header
-		# ad esempio, reset della larghezza della colonna o ordinamento avanzato.
-		print("Doppio click sull'header")
 
 func _is_clicking_progress_bar(mouse_pos: Vector2) -> bool:
 	if mouse_pos.y < header_height:
@@ -830,6 +812,11 @@ func _unhandled_input(event):
 		_selected_cell = [row, col]
 		queue_redraw()
 
+#-------------------------------------------------
+#  Muse button events
+#-------------------------------------------------
+
+# Header click
 func _handle_header_click(mouse_pos: Vector2):
 	var x_offset = -_h_scroll_position
 	var clicked_column = -1
@@ -861,6 +848,7 @@ func _handle_header_click(mouse_pos: Vector2):
 			
 		header_clicked.emit(clicked_column)
 
+# Click on cell
 func _handle_cell_click(mouse_pos: Vector2):
 	var row = floor((mouse_pos.y - header_height) / row_height) + _visible_rows_range[0]
 	if row >= _total_rows:
@@ -880,6 +868,50 @@ func _handle_cell_click(mouse_pos: Vector2):
 		cell_selected.emit(row, col)
 		queue_redraw()
 
+# Double click on cell
+func _handle_double_click(mouse_pos: Vector2):
+	# Determina se il doppio click è avvenuto su una cella di dati
+	if mouse_pos.y >= header_height:
+		var row = floor((mouse_pos.y - header_height) / row_height) + _visible_rows_range[0]
+		var col = -1
+		var x_offset = -_h_scroll_position
+		for c in range(_total_columns):
+			if mouse_pos.x >= x_offset and mouse_pos.x < x_offset + _column_widths[c]:
+				col = c
+				break
+			x_offset += _column_widths[c]
+		
+		if row >= 0 and row < _total_rows and col >= 0 and col < _total_columns:
+			# Avvia l'editing della cella se non è una colonna progress
+			#if not _is_progress_column(col):
+			#	_start_cell_editing(row, col)
+			_start_cell_editing(row, col)
+	# Se il doppio click è sull'header, puoi aggiungere logica specifica qui se necessario
+	elif mouse_pos.y < header_height:
+		# Potresti voler implementare un'azione specifica per il doppio click sull'header
+		# ad esempio, reset della larghezza della colonna o ordinamento avanzato.
+		print("Double click on header")
+
+# Right click on cell
+func _handle_right_click(mouse_pos: Vector2):
+	var row = floor((mouse_pos.y - header_height) / row_height) + _visible_rows_range[0]
+	if row >= _total_rows:
+		return
+	
+	var x_offset = -_h_scroll_position
+	var col = -1
+	
+	for c in range(_total_columns):
+		if mouse_pos.x >= x_offset and mouse_pos.x < x_offset + _column_widths[c]:
+			col = c
+			break
+		x_offset += _column_widths[c]
+	
+	if col >= 0:
+		_selected_cell = [row, col]
+		cell_right_selected.emit(row, col, mouse_pos)
+		queue_redraw()
+		
 func _check_mouse_over_divider(mouse_pos):
 	_mouse_over_divider = -1
 	var x_offset = -_h_scroll_position

@@ -52,6 +52,7 @@ func _ready():
 	
 	# Signals connections
 	dynamic_table.cell_selected.connect(_on_cell_selected)
+	dynamic_table.cell_right_selected.connect(_on_cell_right_selected)
 	dynamic_table.cell_edited.connect(_on_cell_edited)
 	dynamic_table.header_clicked.connect(_on_header_clicked)
 	dynamic_table.column_resized.connect(_on_column_resized)
@@ -62,6 +63,11 @@ func _on_cell_selected(row, column):
 	print("Cell value: ", dynamic_table.get_cell_value(row, column))
 	print("Row value: ", dynamic_table.get_row_value(row))
 
+# On right selected cell callback
+func _on_cell_right_selected(row, column, mouse_pos):
+	print("Cell right selected on row ", row, ", column ", column)
+	print("Mouse position x: ", mouse_pos.x, " y: ", mouse_pos.y)
+	
 # On edited cell callback
 func _on_cell_edited(row, column, old_value, new_value):
 	print("Cell edited on row ", row, ", column ", column)
