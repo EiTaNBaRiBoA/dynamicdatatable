@@ -21,6 +21,9 @@ signal cell_edited(row, column, old_value, new_value)
 @export var font_color: Color = Color(1.0, 1.0, 1.0)
 @export var row_color: Color = Color(0.55, 0.55, 0.55, 1.0)
 @export var alternate_row_color: Color = Color(0.45, 0.45, 0.45, 1.0)
+@export var checkbox_checked_color: Color = Color(0.0, 0.8, 0.0)
+@export var checkbox_unchecked_color: Color = Color(0.8, 0.0, 0.0)
+@export var checkbox_border_color: Color = Color(0.8, 0.8, 0.8)
 
 # Progress bar properties
 @export var progress_bar_start_color: Color = Color.RED
@@ -157,6 +160,13 @@ func _is_progress_column(column_index: int) -> bool:
 	var header_parts = headers[column_index].split("|")
 	return header_parts.size() > 1 and (header_parts[1].to_lower().contains("p") or header_parts[1].to_lower().contains("progress"))
 
+func _is_checkbox_column(column_index: int) -> bool:
+	# Check if header contains checkbox marker
+	if column_index >= headers.size():
+		return false
+	var header_parts = headers[column_index].split("|")
+	return header_parts.size() > 1 and (header_parts[1].to_lower().contains("check") or header_parts[1].to_lower().contains("checkbox"))
+
 func _is_numeric_value(value) -> bool:
 	if value == null:
 		return false
@@ -212,7 +222,7 @@ func set_data(new_data: Array):
 	# checks that the size of the rows coincides with the number of columns, 
 	# otherwise it adds a default value to have the number of columns of the row 
 	# coincide with total columns (defined by the header)
-	var blank = null
+	var blank = false		# null value for compatibility with checkbox cell
 	for row in _data:
 		while row.size() < _total_columns:
 			row.append(blank)
@@ -222,9 +232,11 @@ func set_data(new_data: Array):
 			var header_size = font.get_string_size(str(_get_header_text(col)), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 			var data_size = Vector2.ZERO
 			
-			# Per le colonne progress, consideriamo una larghezza minima maggiore
+			# Per le colonne progress e checkbox, consideriamo una larghezza minima maggiore
 			if _is_progress_column(col):
 				data_size = Vector2(default_minimum_column_width + 20, font_size) # Larghezza minima per progress bar
+			elif _is_checkbox_column(col):
+				data_size = Vector2(default_minimum_column_width - 50, font_size) # Larghezza minima per checkbox
 			else:
 				data_size = font.get_string_size(str(_data[row][col]), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 			
@@ -264,6 +276,20 @@ func ordering_data(column_index: int, ascending: bool = true) -> int:
 			else:
 				_set_icon_up()
 				return a_val > b_val
+		)
+	elif _is_checkbox_column(column_index):
+		# Checkbox ordering (true before false, or vice-versa)
+		_data.sort_custom(func(a, b):
+			var a_val = bool(a[column_index])
+			var b_val = bool(b[column_index])
+			if ascending:
+				_set_icon_down()
+				# True values come first in ascending order
+				return a_val and not b_val
+			else:
+				_set_icon_up()
+				# False values come first in descending order
+				return not a_val and b_val
 		)
 	else:
 		# Text (or number) ordering
@@ -338,8 +364,8 @@ func set_progress_colors(bar_start_color: Color, bar_middle_color: Color, bar_en
 # Editing methods
 
 func _start_cell_editing(row: int, col: int):
-	#if _is_progress_column(col):
-		#return # Do not permit editing on the progress bar trough text
+	if _is_progress_column(col) or _is_checkbox_column(col):
+		return # Do not permit editing on the progress bar or checkbox through text
 	
 	_editing_cell = [row, col]
 	
@@ -549,6 +575,8 @@ func _draw():
 				if not (_editing_cell[0] == row and _editing_cell[1] == col):
 					if _is_progress_column(col):
 						_draw_progress_bar(cell_x, row_y, col, row)
+					elif _is_checkbox_column(col):
+						_draw_checkbox(cell_x, row_y, col, row)
 					else:
 						_draw_cell_text(cell_x, row_y, col, row)
 				
@@ -564,6 +592,8 @@ func _draw():
 								if not (_editing_cell[0] == row and _editing_cell[1] == c):
 									if _is_progress_column(c):
 										_draw_progress_bar(c_x, row_y, c, row)
+									elif _is_checkbox_column(c):
+										_draw_checkbox(c_x, row_y, c, row)
 									else:
 										_draw_cell_text(c_x, row_y, c, row)
 								c_x += _column_widths[c]
@@ -599,6 +629,27 @@ func _draw_progress_bar(cell_x: float, row_y: float, col: int, row: int):
 	var text_size = font.get_string_size(percentage_text, HORIZONTAL_ALIGNMENT_CENTER, bar_width, font_size)
 	draw_string(font, Vector2(bar_x + bar_width/2 - text_size.x/2, bar_y + bar_height/2 + text_size.y/2 - 5), percentage_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, progress_text_color)
 
+func _draw_checkbox(cell_x: float, row_y: float, col: int, row: int):
+	var cell_value = false
+	if row < _data.size() and col < _data[row].size():
+		cell_value = bool(_data[row][col])
+	
+	var checkbox_size = min(row_height, _column_widths[col]) * 0.6
+	var x_offset_centered = cell_x + (_column_widths[col] - checkbox_size) / 2
+	var y_offset_centered = row_y + (row_height - checkbox_size) / 2
+	
+	var checkbox_rect = Rect2(x_offset_centered, y_offset_centered, checkbox_size, checkbox_size)
+	
+	# Draw checkbox background
+	draw_rect(checkbox_rect, checkbox_border_color, false, 1.0)
+	
+	# Draw checkmark if true
+	if cell_value:
+		var fill_rect = checkbox_rect.grow(-checkbox_size * 0.15)
+		draw_rect(fill_rect, checkbox_checked_color)
+	else:
+		var fill_rect = checkbox_rect.grow(-checkbox_size * 0.15)
+		draw_rect(fill_rect, checkbox_unchecked_color)
 
 func _get_interpolated_three_colors(start_color: Color, mid_color: Color, end_color: Color, t: float) -> Color:
 	# Clampa il valore 't' per assicurarti che sia sempre tra 0.0 e 1.0
@@ -632,7 +683,7 @@ func _align_text_in_cell(col: int):
 	var header_content = headers[col].split("|")
 	var _h_alignment = ""
 	if header_content.size() > 1:
-		# Estrae solo il carattere di allineamento, ignorando "p" o "progress"
+		# Estrae solo il carattere di allineamento, ignorando "p" o "progress" e "c" o "check"
 		for char in header_content[1].to_lower():
 			if char in ["l", "c", "r"]:
 				_h_alignment = char
@@ -670,10 +721,14 @@ func _on_gui_input(event):
 					if mouse_pos.y < header_height:
 						_handle_header_click(mouse_pos)
 					else:
-						_handle_cell_click(mouse_pos)
-						# Verifica se il clic è su una progress bar
-						if _is_clicking_progress_bar(mouse_pos):
-							_dragging_progress = true
+						# Verifica se il clic è su una checkbox
+						if _handle_checkbox_click(mouse_pos):
+							pass # La checkbox ha gestito il clic
+						else:
+							_handle_cell_click(mouse_pos)
+							# Verifica se il clic è su una progress bar
+							if _is_clicking_progress_bar(mouse_pos):
+								_dragging_progress = true
 					
 					# Inizia il ridimensionamento della colonna
 					if _mouse_over_divider >= 0:
@@ -761,6 +816,32 @@ func _handle_progress_drag(mouse_pos: Vector2):
 		progress_changed.emit(_progress_drag_row, _progress_drag_col, new_progress)
 		queue_redraw()
 
+func _handle_checkbox_click(mouse_pos: Vector2) -> bool:
+	if mouse_pos.y < header_height:
+		return false
+	
+	var row = floor((mouse_pos.y - header_height) / row_height) + _visible_rows_range[0]
+	if row >= _total_rows:
+		return false
+	
+	var x_offset = -_h_scroll_position
+	var col = -1
+	
+	for c in range(_total_columns):
+		if mouse_pos.x >= x_offset and mouse_pos.x < x_offset + _column_widths[c]:
+			col = c
+			break
+		x_offset += _column_widths[c]
+	
+	if col >= 0 and _is_checkbox_column(col):
+		var old_value = get_cell_value(row, col)
+		var new_value = not bool(old_value)
+		update_cell(row, col, new_value)
+		cell_edited.emit(row, col, old_value, new_value)
+		return true
+	
+	return false
+
 func _unhandled_input(event):
 	if event is InputEventKey and _selected_cell[0] >= 0:
 		var row = _selected_cell[0]
@@ -840,15 +921,20 @@ func _handle_header_click(mouse_pos: Vector2):
 			_ascending = true
 		
 		var selected_row = _selected_cell[0]
-		var last_data = _data[selected_row]
+		var last_data = null
+		if selected_row >= 0 and selected_row < _data.size():
+			last_data = _data[selected_row]
+
 		ordering_data(clicked_column, _ascending)
 		
-		if selected_row >= 0:
+		if selected_row >= 0 and last_data != null:
 			for i in range(_data.size()):
 				if _data[i] == last_data:
 					_selected_cell = [i, 0]
+					break
 			
 		header_clicked.emit(clicked_column)
+		queue_redraw()
 
 # Click on cell
 func _handle_cell_click(mouse_pos: Vector2):
@@ -884,10 +970,9 @@ func _handle_double_click(mouse_pos: Vector2):
 			x_offset += _column_widths[c]
 		
 		if row >= 0 and row < _total_rows and col >= 0 and col < _total_columns:
-			# Avvia l'editing della cella se non è una colonna progress
-			#if not _is_progress_column(col):
-			#	_start_cell_editing(row, col)
-			_start_cell_editing(row, col)
+			# Avvia l'editing della cella se non è una colonna progress o checkbox
+			if not (_is_progress_column(col) or _is_checkbox_column(col)):
+				_start_cell_editing(row, col)
 	# Se il doppio click è sull'header, puoi aggiungere logica specifica qui se necessario
 	elif mouse_pos.y < header_height:
 		# Potresti voler implementare un'azione specifica per il doppio click sull'header
@@ -923,8 +1008,8 @@ func _check_mouse_over_divider(mouse_pos):
 		if abs(mouse_pos.x - divider_x) < _divider_width:
 			_mouse_over_divider = col
 			mouse_default_cursor_shape = Control.CURSOR_HSPLIT
-			break
+			return
 		x_offset += _column_widths[col]
-		mouse_default_cursor_shape = Control.CURSOR_ARROW
-		
+	mouse_default_cursor_shape = Control.CURSOR_ARROW
+
 	queue_redraw()
