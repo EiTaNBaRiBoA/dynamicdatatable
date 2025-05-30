@@ -138,7 +138,7 @@ func _is_date_string(value: String) -> bool:
 	return date_regex.search(value) != null
 
 func _is_date_column(column_index: int) -> bool:
-	# Controlla se la maggior parte dei valori della colonna sono date nel formato gg/mm/aaaa
+	# Check if most of the column values ​​are dates in dd/mm/yyyy format
 	var match_count = 0
 	var total = 0
 	for row in _data:
@@ -148,10 +148,10 @@ func _is_date_column(column_index: int) -> bool:
 		total += 1
 		if _is_date_string(value):
 			match_count += 1
-	return (total > 0 and match_count > total / 2) # soglia: più della metà sono date
+	return (total > 0 and match_count > total / 2) # threshold: more than half are dates
 
 func _is_progress_column(column_index: int) -> bool:
-	# Verifica se l'header contiene il marcatore per progress bar
+	# Check if header contains progress bar marker
 	if column_index >= headers.size():
 		return false
 	var header_parts = headers[column_index].split("|")
@@ -164,7 +164,7 @@ func _is_numeric_value(value) -> bool:
 	return str_val.is_valid_float() or str_val.is_valid_int()
 
 func _get_progress_value(value) -> float:
-	# Converte il valore in un float tra 0.0 e 1.0
+	# Converts the value to a float between 0.0 and 1.0
 	if value == null:
 		return 0.0
 	
@@ -172,13 +172,13 @@ func _get_progress_value(value) -> float:
 	if _is_numeric_value(value):
 		num_val = float(str(value))
 	
-	# Se il valore è già tra 0 e 1, lo usiamo direttamente
+	# If the value is already between 0 and 1, we use it directly
 	if num_val >= 0.0 and num_val <= 1.0:
 		return num_val
-	# Se è tra 0 e 100, lo convertiamo in percentuale
+	# If it's between 0 and 100, we convert it to a percentage.
 	elif num_val >= 0.0 and num_val <= 100.0:
 		return num_val / 100.0
-	# Altrimenti lo limitiamo tra 0 e 1
+	# Otherwise we limit it between 0 and 1
 	else:
 		return clamp(num_val, 0.0, 1.0)
 
@@ -209,8 +209,9 @@ func set_data(new_data: Array):
 	_data = new_data
 	_total_rows = _data.size()
 	_visible_rows_range = [0, min(_total_rows, floor(self.size.y / row_height))]
-	# controlla che le righe abbiano la dimensione del numero di colonne, al contrario aggiunge un valore predefinito per riportare
-	# il numero delle colonne della riga coincidente con quello delle colonne totali (definite dall'header)
+	# checks that the size of the rows coincides with the number of columns, 
+	# otherwise it adds a default value to have the number of columns of the row 
+	# coincide with total columns (defined by the header)
 	var blank = null
 	for row in _data:
 		while row.size() < _total_columns:
@@ -223,7 +224,7 @@ func set_data(new_data: Array):
 			
 			# Per le colonne progress, consideriamo una larghezza minima maggiore
 			if _is_progress_column(col):
-				data_size = Vector2(120, font_size) # Larghezza minima per progress bar
+				data_size = Vector2(default_minimum_column_width + 20, font_size) # Larghezza minima per progress bar
 			else:
 				data_size = font.get_string_size(str(_data[row][col]), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 			
@@ -241,6 +242,7 @@ func ordering_data(column_index: int, ascending: bool = true) -> int:
 	_last_column_sorted = column_index
 		
 	if _is_date_column(column_index):
+		# Dates ordering
 		_data.sort_custom(func(a, b):
 			var a_val = _parse_date(str(a[column_index]))
 			var b_val = _parse_date(str(b[column_index]))
@@ -252,7 +254,7 @@ func ordering_data(column_index: int, ascending: bool = true) -> int:
 				return a_val > b_val
 		)
 	elif _is_progress_column(column_index):
-		# Ordinamento per colonne progress
+		# Progress bar ordering
 		_data.sort_custom(func(a, b):
 			var a_val = _get_progress_value(a[column_index])
 			var b_val = _get_progress_value(b[column_index])
@@ -264,6 +266,7 @@ func ordering_data(column_index: int, ascending: bool = true) -> int:
 				return a_val > b_val
 		)
 	else:
+		# Text (or number) ordering
 		_data.sort_custom(func(a, b):
 			var a_val = a[column_index]
 			var b_val = b[column_index]
@@ -277,7 +280,6 @@ func ordering_data(column_index: int, ascending: bool = true) -> int:
 	queue_redraw()
 	return -1
 
-		
 func add_row(row_data: Array):
 	_data.append(row_data)
 	_total_rows += 1
@@ -593,7 +595,7 @@ func _draw_progress_bar(cell_x: float, row_y: float, col: int, row: int):
 		draw_rect(Rect2(bar_x, bar_y, progress_width, bar_height), _get_interpolated_three_colors(progress_bar_start_color, progress_bar_middle_color, progress_bar_end_color, cell_value))
 		
 	# Disegna il testo percentuale
-	var percentage_text = str(int(cell_value * 100)) + "%"
+	var percentage_text = str(int(round(cell_value * 100))) + "%"
 	var text_size = font.get_string_size(percentage_text, HORIZONTAL_ALIGNMENT_CENTER, bar_width, font_size)
 	draw_string(font, Vector2(bar_x + bar_width/2 - text_size.x/2, bar_y + bar_height/2 + text_size.y/2 - 5), percentage_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, progress_text_color)
 
@@ -895,7 +897,7 @@ func _handle_double_click(mouse_pos: Vector2):
 # Right click on cell
 func _handle_right_click(mouse_pos: Vector2):
 	var row = floor((mouse_pos.y - header_height) / row_height) + _visible_rows_range[0]
-	if row >= _total_rows:
+	if row >= _total_rows or row < 0:  # (row < 0) exscludes header row
 		return
 	
 	var x_offset = -_h_scroll_position
