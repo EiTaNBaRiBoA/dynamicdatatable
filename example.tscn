@@ -24,4 +24,3 @@ offset_bottom = -321.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("2_wsykm")
-default_minimum_column_width = 50.0

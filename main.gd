@@ -81,4 +81,3 @@ func _on_header_clicked(column):
 # On resized column callback
 func _on_column_resized(column, new_width):
 	print("Column ", column, " resized at width ", new_width)
-	

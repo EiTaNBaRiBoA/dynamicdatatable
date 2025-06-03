@@ -13,7 +13,7 @@ signal cell_edited(row, column, old_value, new_value)
 @export var headers: Array[String] = []
 @export var header_height: float = 35.0
 @export var header_color: Color = Color(0.2, 0.2, 0.2)
-@export var default_minimum_column_width: float = 100.0
+@export var default_minimum_column_width: float = 50.0
 @export var row_height: float = 30.0
 @export var grid_color: Color = Color(0.8, 0.8, 0.8)
 @export var selected_back_color: Color = Color(0.0, 0.0, 1.0, 0.5)
@@ -683,7 +683,7 @@ func _align_text_in_cell(col: int):
 	var header_content = headers[col].split("|")
 	var _h_alignment = ""
 	if header_content.size() > 1:
-		# Estrae solo il carattere di allineamento, ignorando "p" o "progress" e "c" o "check"
+		# Estrae solo il carattere di allineamento, ignorando "p" o "progress" o "check"
 		for char in header_content[1].to_lower():
 			if char in ["l", "c", "r"]:
 				_h_alignment = char
