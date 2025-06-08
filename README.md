@@ -186,4 +186,8 @@ Any amount is greatly appreciated!
 
 My [Paypal donation link](https://www.paypal.me/donatejospic?locale.x=it_IT)
 
+BTC address: bc1quru9ev0y8hwzmdxcfrmqd3j53yaxdhvef53q7t
+
+ETH address: 0xdB5416934F4EfBA54c804a15f3F61542CD710333
+
 Thank you for your support!
