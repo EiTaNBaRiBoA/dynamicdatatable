@@ -11,7 +11,7 @@ var data																				# array of data, rows and columns
 var current_selected_row = -1															# current selected row
 var current_multiple_selected_rows = -1													# current multiple selected_rows
 var multiple_selected_rows = null														# array o selected rows
- 
+
 func _ready():
 	# Set table header
 	headers = ["ID|C", "Name", "Lastname", "Age|r", "Job", "City", "Date", "Task|p", "Completed|check"]

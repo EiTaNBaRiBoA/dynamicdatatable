@@ -12,21 +12,30 @@ signal progress_changed(row, column, new_value)
 signal cell_edited(row, column, old_value, new_value)
 
 # Table properties
+@export_group("Default color")
+@export var default_font_color: Color = Color(1.0, 1.0, 1.0)
+@export_group("Header")
 @export var headers: Array[String] = []
 @export var header_height: float = 35.0
 @export var header_color: Color = Color(0.2, 0.2, 0.2)
+@export var header_filter_active_font_color: Color = Color(1.0, 1.0, 0.0)
+@export_group("Size and grid")
 @export var default_minimum_column_width: float = 50.0
 @export var row_height: float = 30.0
 @export var grid_color: Color = Color(0.8, 0.8, 0.8)
+@export_group("Rows")
 @export var selected_back_color: Color = Color(0.0, 0.0, 1.0, 0.5)
-@export var font_color: Color = Color(1.0, 1.0, 1.0)
 @export var row_color: Color = Color(0.55, 0.55, 0.55, 1.0)
 @export var alternate_row_color: Color = Color(0.45, 0.45, 0.45, 1.0)
+
+# Checkbox properties
+@export_group("Checkbox")
 @export var checkbox_checked_color: Color = Color(0.0, 0.8, 0.0)
 @export var checkbox_unchecked_color: Color = Color(0.8, 0.0, 0.0)
 @export var checkbox_border_color: Color = Color(0.8, 0.8, 0.8)
 
 # Progress bar properties
+@export_group("Progress bar")
 @export var progress_bar_start_color: Color = Color.RED
 @export var progress_bar_middle_color: Color = Color.ORANGE
 @export var progress_bar_end_color: Color = Color.FOREST_GREEN
@@ -36,6 +45,7 @@ signal cell_edited(row, column, old_value, new_value)
 
 # Internal variables
 var _data = []
+var _full_data = [] 
 var _column_widths = []
 var _min_column_widths = []
 var _total_rows = 0
@@ -71,6 +81,10 @@ var _last_click_pos = Vector2.ZERO
 var _double_click_threshold = 400 # milliseconds
 var _click_position_threshold = 5 # pixels
 
+# Filtering variables
+var _filter_line_edit: LineEdit 
+var _filtering_column = -1     
+
 # Node references
 var _h_scroll: HScrollBar
 var _v_scroll: VScrollBar
@@ -81,9 +95,10 @@ var font_size = get_theme_default_font_size()
 
 func _ready():
 	self.focus_mode = Control.FOCUS_ALL # For input from keyboard
-
+	
 	_setup_editing_components()
-		
+	_setup_filtering_components() 
+	
 	_h_scroll = HScrollBar.new()
 	_h_scroll.name = "HScrollBar"
 	_h_scroll.set_anchors_and_offsets_preset(PRESET_BOTTOM_WIDE)
@@ -111,6 +126,14 @@ func _ready():
 		
 	queue_redraw()
 
+func _setup_filtering_components():
+	_filter_line_edit = LineEdit.new()
+	_filter_line_edit.name = "FilterLineEdit"
+	_filter_line_edit.visible = false
+	_filter_line_edit.text_submitted.connect(_apply_filter)
+	_filter_line_edit.focus_exited.connect(_on_filter_focus_exited)
+	add_child(_filter_line_edit)
+	
 func _setup_editing_components():
 	_edit_line_edit = LineEdit.new()
 	_edit_line_edit.visible = false
@@ -198,7 +221,11 @@ func set_headers(new_headers: Array):
 	queue_redraw()
 
 func set_data(new_data: Array):
-	_data = new_data
+	# Memorizza una copia completa dei dati come master list
+	_full_data = new_data.duplicate(true) 
+	# La vista (_data) contiene riferimenti alle righe nella master list
+	_data = _full_data.duplicate(false) 
+	
 	_total_rows = _data.size()
 	_visible_rows_range = [0, min(_total_rows, floor(self.size.y / row_height) if row_height > 0 else 0)]
 	
@@ -212,17 +239,17 @@ func set_data(new_data: Array):
 		while row_data_item.size() < _total_columns:
 			row_data_item.append(blank)
 	
-	for r in range(_total_rows): # Rinominato `row` a `r`
+	for r in range(_total_rows):
 		for col in range (_total_columns):
 			var header_size = font.get_string_size(str(_get_header_text(col)), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-			var data_s = Vector2.ZERO # Rinominato `data_size` a `data_s`
+			var data_s = Vector2.ZERO
 			
 			if _is_progress_column(col):
 				data_s = Vector2(default_minimum_column_width + 20, font_size)
 			elif _is_checkbox_column(col):
 				data_s = Vector2(default_minimum_column_width - 50, font_size)
 			else:
-				if r < _data.size() and col < _data[r].size(): # Aggiunto controllo
+				if r < _data.size() and col < _data[r].size():
 					data_s = font.get_string_size(str(_data[r][col]), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 			
 			if (_column_widths[col] < max(header_size.x, data_s.x)):
@@ -373,7 +400,7 @@ func _restore_selected_rows():
 			_selected_rows.append(idx)
 	
 func _start_cell_editing(r: int, col: int): # Rinominato `row` a `r`
-	if _is_progress_column(col) or _is_checkbox_column(col): return
+	if _is_checkbox_column(col): return   # or _is_progress_column(col)  enable also for progress bar column
 	_editing_cell = [r, col]
 	var cell_rect = _get_cell_rect(r, col)
 	if cell_rect == Rect2(): return
@@ -468,6 +495,7 @@ func _draw():
 	var current_x_offset = -_h_scroll_position # Rinominato `x_offset`
 	var current_y_offset = header_height # Rinominato `y_offset`
 	var visible_drawing_width = size.x - (_v_scroll.size.x if _v_scroll.visible else 0) # Rinominato `visible_width`
+	var header_font_color = default_font_color
 	
 	draw_rect(Rect2(0, 0, size.x, header_height), header_color)
 	
@@ -485,13 +513,18 @@ func _draw():
 				var header_text_content = align_info[0]
 				var h_align_val = align_info[1]
 				var x_margin_val = align_info[2]
+				if (col == _filtering_column):
+					header_font_color = header_filter_active_font_color
+					header_text_content += " (" + str(_data.size()) + ")"
+				else:
+					header_font_color = default_font_color
 				var text_s = font.get_string_size(header_text_content, h_align_val, col_width, font_size) # Rinominato `text_size`
-				draw_string(font, Vector2(header_cell_x + x_margin_val, header_height/2.0 + text_s.y/2.0 - (font_size/2.0 - 2.0)), header_text_content, h_align_val, col_width - abs(x_margin_val), font_size, font_color)
+				draw_string(font, Vector2(header_cell_x + x_margin_val, header_height/2.0 + text_s.y/2.0 - (font_size/2.0 - 2.0)), header_text_content, h_align_val, col_width - abs(x_margin_val), font_size, header_font_color)
 				if (col == _last_column_sorted):
 					var icon_h_align = HORIZONTAL_ALIGNMENT_LEFT
 					if (h_align_val == HORIZONTAL_ALIGNMENT_LEFT or h_align_val == HORIZONTAL_ALIGNMENT_CENTER):
 						icon_h_align = HORIZONTAL_ALIGNMENT_RIGHT
-					draw_string(font, Vector2(header_cell_x, header_height/2.0 + text_s.y/2.0 - (font_size/2.0 - 1.0)), _icon_sort, icon_h_align, col_width, font_size/1.3, font_color)
+					draw_string(font, Vector2(header_cell_x, header_height/2.0 + text_s.y/2.0 - (font_size/2.0 - 1.0)), _icon_sort, icon_h_align, col_width, font_size/1.3, header_font_color)
 	
 			var divider_x_pos = header_cell_x + col_width
 			if (divider_x_pos < visible_drawing_width and col <= _total_columns -1): # Non disegnare per l'ultima colonna
@@ -591,7 +624,7 @@ func _draw_cell_text(cell_x: float, row_y: float, col: int, r_idx: int): # `row`
 	
 	var text_s = font.get_string_size(cell_val, h_align_val, _column_widths[col] - abs(x_margin_val) * 2, font_size) # Rinominato e corretto width per text
 	var text_y_pos = row_y + row_height/2.0 + text_s.y/2.0 - (font_size/2.0 - 2.0) # Calcolo y per centrare meglio
-	draw_string(font, Vector2(cell_x + x_margin_val, text_y_pos), cell_val, h_align_val, _column_widths[col] - abs(x_margin_val), font_size, font_color)
+	draw_string(font, Vector2(cell_x + x_margin_val, text_y_pos), cell_val, h_align_val, _column_widths[col] - abs(x_margin_val), font_size, default_font_color)
 			
 func _align_text_in_cell(col: int):
 	var header_parts = headers[col].split("|")
@@ -758,31 +791,99 @@ func _handle_header_click(mouse_pos: Vector2):
 			break
 		current_x += _column_widths[col]
 
+#------------------------------------------------------------
+# FILTERING FUNCTIONS
+#------------------------------------------------------------
 
-func _on_gui_input(event: InputEvent): # Modificato per includere gestione tastiera
+func _handle_header_double_click(mouse_pos: Vector2):
+	_finish_editing(false) # Termina l'editing di una cella, se attivo
+	var current_x = -_h_scroll_position
+	for col in range(_total_columns):
+		if col >= _column_widths.size(): continue
+		var col_width = _column_widths[col]
+		if mouse_pos.x >= current_x and mouse_pos.x < current_x + col_width:
+			var header_rect = Rect2(current_x, 0, col_width, header_height)
+			_start_filtering(col, header_rect)
+			break
+		current_x += col_width
+
+func _start_filtering(col: int, header_rect: Rect2):
+	if _filtering_column == col and _filter_line_edit.visible:
+		return # Già in modalità filtro su questa colonna
+
+	_filtering_column = col
+	_filter_line_edit.position = header_rect.position + Vector2(1, 1)
+	_filter_line_edit.size = header_rect.size - Vector2(2, 2)
+	_filter_line_edit.text = ""
+	_filter_line_edit.visible = true
+	_filter_line_edit.grab_focus()
+
+func _apply_filter(search_key: String):
+	if not _filter_line_edit.visible: return
+	
+	_filter_line_edit.visible = false
+	if _filtering_column == -1: return
+
+	if search_key.is_empty():
+		# Se la chiave è vuota, ripristina tutti i dati (rimuovi il filtro)
+		_data = _full_data.duplicate(false)
+		_filtering_column = -1
+	else:
+		var filtered_data = []
+		var key_lower = search_key.to_lower()
+		for row_data in _full_data:
+			if _filtering_column < row_data.size() and row_data[_filtering_column] != null:
+				var cell_value = str(row_data[_filtering_column]).to_lower()
+				if cell_value.contains(key_lower):
+					filtered_data.append(row_data) # Aggiunge il riferimento
+		_data = filtered_data
+
+	# Resetta la vista
+	_total_rows = _data.size()
+	_v_scroll_position = 0
+	_v_scroll.value = 0
+	_selected_rows.clear()
+	_previous_sort_selected_rows.clear()
+	_focused_row = -1
+	_last_column_sorted = -1 # Resetta l'ordinamento visuale
+	
+	_update_scrollbars()
+	queue_redraw()
+
+func _on_filter_focus_exited():
+	# Applica il filtro anche quando si perde il focus dal campo di testo
+	if _filter_line_edit.visible:
+		_apply_filter(_filter_line_edit.text)
+	
+func _on_gui_input(event: InputEvent):
 	if event is InputEventMouseButton:
-		var mouse_btn_event = event as InputEventMouseButton # Cast
+		var mouse_btn_event = event as InputEventMouseButton
 		if mouse_btn_event.button_index == MOUSE_BUTTON_LEFT:
 			if mouse_btn_event.pressed:
-				var m_pos = mouse_btn_event.position # Rinominato `mouse_pos`
+				var m_pos = mouse_btn_event.position
 				
+				# Gestione doppio click
 				if _click_count == 1 and _double_click_timer.time_left > 0 and _last_click_pos.distance_to(m_pos) < _click_position_threshold:
 					_click_count = 0
 					_double_click_timer.stop()
-					_handle_double_click(m_pos)
-				else:
+					if m_pos.y < header_height:
+						_handle_header_double_click(m_pos) # <-- NUOVA CHIAMATA
+					else:
+						_handle_double_click(m_pos)
+				else: # Gestione singolo click
 					_click_count = 1
 					_last_click_pos = m_pos
 					_double_click_timer.start()
 
 					if m_pos.y < header_height:
-						_handle_header_click(m_pos)
+						# Se il LineEdit del filtro è visibile, non processare il click singolo sull'header
+						if not _filter_line_edit.visible:
+							_handle_header_click(m_pos)
 					else:
-						if not _handle_checkbox_click(m_pos): # Se non è un click su checkbox
-							_handle_cell_click(m_pos, mouse_btn_event) # Passa l'evento per i modificatori
-						if _is_clicking_progress_bar(m_pos): # Va dopo cell_click per impostare _focused_row/_col
+						_handle_checkbox_click(m_pos)
+						_handle_cell_click(m_pos, mouse_btn_event)
+						if _is_clicking_progress_bar(m_pos):
 							_dragging_progress = true
-					
 					if _mouse_over_divider >= 0:
 						_resizing_column = _mouse_over_divider
 						_resizing_start_pos = m_pos.x
