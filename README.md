@@ -5,7 +5,7 @@ DynamicDataTable is a GDScript plugin for Godot 4 that allows you to create and 
 ![Table example](https://github.com/jospic/dynamicdatatable/blob/master/ex_table_1.png)
 *Table example*
 
-[![Watch some features](https://img.youtube.com/vi/WT5OIcFDpVk/default.jpg)](https://www.youtube.com/watch?v=WT5OIcFDpVk)
+[![Watch some features](https://img.youtube.com/vi/WT5OIcFDpVk/hqdefault.jpg)](https://www.youtube.com/watch?v=WT5OIcFDpVk)
 *Watch some features*
  
 ## Features
