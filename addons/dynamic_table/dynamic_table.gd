@@ -406,7 +406,10 @@ func _start_cell_editing(r: int, col: int): # Rinominato `row` a `r`
 	if cell_rect == Rect2(): return
 	_edit_line_edit.position = cell_rect.position
 	_edit_line_edit.size = cell_rect.size
-	_edit_line_edit.text = str(get_cell_value(r, col)) if get_cell_value(r, col) != null else ""
+	var cell_value = get_cell_value(r, col)
+	if cell_value is float:
+		cell_value = snapped(cell_value, 0.01)
+	_edit_line_edit.text = str(cell_value) if get_cell_value(r, col) != null else ""
 	_edit_line_edit.visible = true
 	_edit_line_edit.grab_focus()
 	_edit_line_edit.select_all()
