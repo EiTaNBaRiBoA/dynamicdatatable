@@ -22,7 +22,7 @@ DynamicDataTable is a GDScript plugin for Godot 4 that allows you to create and 
 * Mouse events on headers and data cells.
 * Keyboard events on selected row (cursor up/down, page up/down, home, end).
 * Appearance customization through themes and styles.
-* Compatibility from Godot 4.4.1.
+* Compatibility from Godot 4.3.
 
 ## Installation
 
