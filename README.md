@@ -13,7 +13,7 @@ DynamicDataTable is a GDScript plugin for Godot 4 that allows you to create and 
 
 * Dynamically create tables with customizable headers and data.
 * Dynamic resizing column widths.
-* Support for various data types (strings, numbers, dates in the format dd/mm/yyyy, progressbars, checkboxes).
+* Support for various data types (strings, numbers, dates in the format dd/mm/yyyy, progressbars, checkboxes, images/icon).
 * Column sorting in ascending or descending order.
 * Filtering rows by column.
 * Cell edit mode by left mouse button double click
@@ -22,7 +22,7 @@ DynamicDataTable is a GDScript plugin for Godot 4 that allows you to create and 
 * Mouse events on headers and data cells.
 * Keyboard events on selected row (cursor up/down, page up/down, home, end).
 * Appearance customization through themes and styles.
-* Compatibility from Godot 4.3.
+* Compatibility from Godot 4.4.1.
 
 ## Installation
 
@@ -53,21 +53,22 @@ extends Control
 # Popups
 @onready var popup = $PopupMenu
 @onready var confirm_popup = $ConfirmationDialog
+@onready var ico = load("res://addons/dynamic_table/icon.png")
 
-var headers                                         # array of columns header
-var data                                            # array of data, rows and columns
-var current_selected_row = -1                       # current selected row
-var current_multiple_selected_rows = -1             # current multiple selected_rows
-var multiple_selected_rows = null                   # array o selected rows
- 
+var headers																				# array of columns header
+var data																				# array of data, rows and columns
+var current_selected_row = -1															# current selected row
+var current_multiple_selected_rows = -1													# current multiple selected_rows
+var multiple_selected_rows = null														# array o selected rows
+
 func _ready():
 	# Set table header
-	headers = ["ID|C", "Name", "Lastname", "Age|r", "Job", "City", "Date", "Task|p", "Completed|check"]
+	headers = ["ID|C", "Name", "Lastname", "Age|r", "Job", "City", "Date", "Task|p", "Completed|check", "Icon|image"]
 	dynamic_table.set_headers(headers)
 	
 	# Example data
 	data = [
-		[1, "Michael", "Smith", 34, "Engineer", "London", "10/12/2005", 0.5, 1],
+		[1, "Michael", "Smith", 34, "Engineer", "London", "10/12/2005", 0.5, 1, ico],
 		[2, "Louis", "Johnson", 28, "Doctor", "New York", "05/11/2023", 0],
 		[3, "Ann", "Williams", 42, "Lawyer", "Tokyo", "18/03/2025", 0, 0],
 		[4, "John", "Brown", 31, "Teacher", "Sydney", "02/07/2024", 0, 0],
@@ -179,8 +180,6 @@ func _on_confirmation_dialog_confirmed() -> void:
 		dynamic_table.delete_row(current_selected_row)	# single row
 	dynamic_table.set_selected_cell(-1, -1)				# cancel current selection
 		
-	
-
 
 ```	
 

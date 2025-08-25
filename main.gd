@@ -5,6 +5,7 @@ extends Control
 # Popups
 @onready var popup = $PopupMenu
 @onready var confirm_popup = $ConfirmationDialog
+@onready var ico = load("res://addons/dynamic_table/icon.png")
 
 var headers																				# array of columns header
 var data																				# array of data, rows and columns
@@ -14,12 +15,12 @@ var multiple_selected_rows = null														# array o selected rows
 
 func _ready():
 	# Set table header
-	headers = ["ID|C", "Name", "Lastname", "Age|r", "Job", "City", "Date", "Task|p", "Completed|check"]
+	headers = ["ID|C", "Name", "Lastname", "Age|r", "Job", "City", "Date", "Task|p", "Completed|check", "Icon|image"]
 	dynamic_table.set_headers(headers)
 	
 	# Example data
 	data = [
-		[1, "Michael", "Smith", 34, "Engineer", "London", "10/12/2005", 0.5, 1],
+		[1, "Michael", "Smith", 34, "Engineer", "London", "10/12/2005", 0.5, 1, ico],
 		[2, "Louis", "Johnson", 28, "Doctor", "New York", "05/11/2023", 0],
 		[3, "Ann", "Williams", 42, "Lawyer", "Tokyo", "18/03/2025", 0, 0],
 		[4, "John", "Brown", 31, "Teacher", "Sydney", "02/07/2024", 0, 0],

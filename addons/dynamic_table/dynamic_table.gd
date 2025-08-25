@@ -85,6 +85,9 @@ var _click_position_threshold = 5 # pixels
 var _filter_line_edit: LineEdit 
 var _filtering_column = -1     
 
+# Tooltip variable
+var _tooltip_cell = [-1, -1] # [row, col]
+
 # Node references
 var _h_scroll: HScrollBar
 var _v_scroll: VScrollBar
@@ -189,6 +192,12 @@ func _is_checkbox_column(column_index: int) -> bool:
 	var header_parts = headers[column_index].split("|")
 	return header_parts.size() > 1 and (header_parts[1].to_lower().contains("check") or header_parts[1].to_lower().contains("checkbox"))
 
+func _is_image_column(column_index: int) -> bool:
+	if column_index >= headers.size():
+		return false
+	var header_parts = headers[column_index].split("|")
+	return header_parts.size() > 1 and header_parts[1].to_lower().contains("image")
+
 func _is_numeric_value(value) -> bool:
 	if value == null:
 		return false
@@ -248,6 +257,8 @@ func set_data(new_data: Array):
 				data_s = Vector2(default_minimum_column_width + 20, font_size)
 			elif _is_checkbox_column(col):
 				data_s = Vector2(default_minimum_column_width - 50, font_size)
+			elif _is_image_column(col):
+				data_s = Vector2(row_height, row_height)
 			else:
 				if r < _data.size() and col < _data[r].size():
 					data_s = font.get_string_size(str(_data[r][col]), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
@@ -560,6 +571,8 @@ func _draw():
 						_draw_progress_bar(cell_x_pos, row_y_pos, c_idx, r_idx)
 					elif _is_checkbox_column(c_idx):
 						_draw_checkbox(cell_x_pos, row_y_pos, c_idx, r_idx)
+					elif _is_image_column(c_idx):
+						_draw_image_cell(cell_x_pos, row_y_pos, c_idx, r_idx)
 					else:
 						_draw_cell_text(cell_x_pos, row_y_pos, c_idx, r_idx)
 			cell_x_pos += current_col_w
@@ -608,6 +621,38 @@ func _draw_checkbox(cell_x: float, row_y: float, col: int, r_idx: int): # `row` 
 		draw_rect(fill_r, checkbox_checked_color)
 	else:
 		draw_rect(fill_r, checkbox_unchecked_color)
+
+func _draw_image_cell(cell_x: float, row_y: float, col: int, r_idx: int):
+	var value = get_cell_value(r_idx, col)
+	if not value is Texture2D:
+		return # Disegna solo se il valore è una texture
+
+	var texture: Texture2D = value
+	var margin = 2.0
+	var cell_inner_width = _column_widths[col] - margin * 2
+	var cell_inner_height = row_height - margin * 2
+	
+	if cell_inner_width <= 0 or cell_inner_height <= 0: return
+
+	var tex_size = texture.get_size()
+	var tex_aspect = tex_size.x / tex_size.y
+	var cell_aspect = cell_inner_width / cell_inner_height
+
+	var draw_rect = Rect2()
+	if tex_aspect > cell_aspect:
+		# La texture è più "larga" della cella, adatta alla larghezza
+		draw_rect.size.x = cell_inner_width
+		draw_rect.size.y = cell_inner_width / tex_aspect
+		draw_rect.position.x = cell_x + margin
+		draw_rect.position.y = row_y + margin + (cell_inner_height - draw_rect.size.y) / 2
+	else:
+		# La texture è più "alta" o uguale, adatta all'altezza
+		draw_rect.size.y = cell_inner_height
+		draw_rect.size.x = cell_inner_height * tex_aspect
+		draw_rect.position.y = row_y + margin
+		draw_rect.position.x = cell_x + margin + (cell_inner_width - draw_rect.size.x) / 2
+		
+	draw_texture_rect(texture, draw_rect, false)
 
 func _get_interpolated_three_colors(start_c: Color, mid_c: Color, end_c: Color, t_val: float) -> Color: # Rinominato var
 	var cl_t = clampf(t_val, 0.0, 1.0) # Rinominato `clamped_t`
@@ -918,6 +963,7 @@ func _on_gui_input(event: InputEvent):
 			queue_redraw()
 		else:
 			_check_mouse_over_divider(m_pos)
+			_update_tooltip(m_pos)
 	
 	elif event is InputEventKey and event.is_pressed() and has_focus(): # Gestione input tastiera
 		_handle_key_input(event as InputEventKey) # Chiama la nuova funzione dedicata
@@ -936,6 +982,42 @@ func _check_mouse_over_divider(mouse_pos: Vector2):
 				_mouse_over_divider = col
 				mouse_default_cursor_shape = CURSOR_HSIZE
 	queue_redraw() # Aggiorna per mostrare il divisore evidenziato
+
+func _update_tooltip(mouse_pos: Vector2):
+	var current_cell = [-1, -1]
+	var new_tooltip = ""
+
+	if mouse_pos.y < header_height:
+		var current_x = -_h_scroll_position
+		for col in range(_total_columns):
+			if col >= _column_widths.size(): continue
+			var col_width = _column_widths[col]
+			if mouse_pos.x >= current_x and mouse_pos.x < current_x + col_width:
+				var header_text = _get_header_text(col)
+				var text_width = font.get_string_size(header_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+				new_tooltip = header_text
+				current_cell = [-2, col]
+				break
+			current_x += col_width
+	else:
+		var row = floor((mouse_pos.y - header_height) / row_height) + _visible_rows_range[0]
+		if row >= 0 and row < _total_rows:
+			var current_x = -_h_scroll_position
+			for col in range(_total_columns):
+				if col >= _column_widths.size(): continue
+				var col_width = _column_widths[col]
+				if mouse_pos.x >= current_x and mouse_pos.x < current_x + col_width:
+					if not _is_image_column(col) and not _is_progress_column(col) and not _is_checkbox_column(col):
+						var cell_text = str(get_cell_value(row, col))
+						var text_width = font.get_string_size(cell_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+						new_tooltip = cell_text
+					current_cell = [row, col]
+					break
+				current_x += col_width
+
+	if current_cell != _tooltip_cell:
+		_tooltip_cell = current_cell
+		self.tooltip_text = new_tooltip
 
 func _is_clicking_progress_bar(mouse_pos: Vector2) -> bool:
 	if mouse_pos.y < header_height: return false
